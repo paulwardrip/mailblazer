@@ -1,0 +1,25 @@
+{
+  "name": "mailblazer",
+  "version": "1.0.0",
+  "description": "find (imap/pop3) servers for an email domain using: dns, mozilla autoconfig, ms autodiscover and port scans.",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "clean": "rm -rf gen dist",
+    "build": "yarn clean && mkdir gen && yarn rollup",
+    "rollup": "rollup -c"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-replace": "^6.0.2",
+    "@rollup/plugin-terser": "^0.4.4",
+    "rollup": "^4.42.0"
+  },
+  "dependencies": {
+    "domainiac": "https://github.com/paulwardrip/domainiac.git",
+    "async": "^3.2.6",
+    "cheerio": "^1.0.0"
+  }
+}
