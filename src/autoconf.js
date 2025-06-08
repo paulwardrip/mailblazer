@@ -1,7 +1,9 @@
 
-	import { load } from "cheerio"; 
+import { load } from "cheerio"; 
 
-	let VERBOSE = false;
+export default function(verbose=false) {
+
+	let VERBOSE = verbose;
 
 	function parse(xml,domain) {
 		if (VERBOSE) console.log(xml);
@@ -51,7 +53,7 @@
 		});
 	}
 
-	export function config(domain) {
+	function config(domain) {
 		return new Promise(async resolve=>{
 			let server = await check("https://" + domain + "/mail/config-v1.1.xml",domain);
 			if (!server) server = await check("https://"+domain+"/.well-known/autoconfig/mail/config-v1.1.xml",domain);
@@ -96,7 +98,7 @@
 		}
 	}
 
-	export function discover(domain, email){
+	function discover(domain, email){
 		return new Promise(async resolve=>{
 			const u = "https://" + domain + "/autodiscover/autodiscover.xml";
 			const xml = post(email);
@@ -127,6 +129,8 @@
 		})
 	}
 
-	export default {
-		config, discover
+	return {
+		config,
+		discover
 	}
+}

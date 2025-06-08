@@ -1,11 +1,12 @@
 
-    import { Socket } from "node:net"
-    import { createSocket } from "node:dgram"
-    import async from "async"
+import { Socket } from "node:net"
+import { createSocket } from "node:dgram"
+import async from "async"
 
-    let VERBOSE = false
+export default function(verbose=false) {
+    let VERBOSE = verbose
 
-    function portscanner (host, port) {
+    function scanner (host, port) {
         return new Promise((resolve, reject) => {    
             function udp(){
                 const socket = createSocket("udp4")
@@ -53,27 +54,7 @@
         });
     };
 
-    export function webmail(dom, source){
-        return new Promise(async resolve=>{
-            if (typeof dom === "object" && dom instanceof Array) {
-                for (let d of dom) {
-                    let p = await webmail(d, source);
-                    if (p) return resolve(p);
-                }
-                resolve();
-            } else {
-                let q = queueMaker();
-                q.webmail(dom, source);                
-
-                async.parallel(q.queue(), function(){
-                    let servers = q.servers();
-                    sortServers(servers,resolve);
-                });
-            }
-        })
-    }
-
-    export function pop3(dom, source){
+    function pop3(dom, source){
         return new Promise(async resolve=>{
             if (typeof dom === "object" && dom instanceof Array) {
                 for (let d of dom) {
@@ -93,7 +74,7 @@
         })
     }
 
-    export function imap(dom, source){
+    function imap(dom, source){
         return new Promise(async resolve=>{
             if (typeof dom === "object" && dom instanceof Array) {
                 for (let d of dom) {
@@ -113,7 +94,7 @@
         })
     }
 
-    export function portscan(dom, source){
+    function portscan(dom, source){
         return new Promise(async resolve=>{
             if (typeof dom === "object" && dom instanceof Array) {
                 for (let d of dom) {
@@ -144,7 +125,7 @@
         function pusher(hostname, port, type, ssl, source) {
             queue.push(function(cb){
                 (async()=>{
-                    let result = await portscanner(hostname, port);
+                    let result = await scanner(hostname, port);
                     if (result) {
                         servers.push({ hostname, port, type, ssl, source })
                     }
@@ -176,71 +157,8 @@
             servers() { return servers }
         }
     }
-
-/*
-    export function search(dom){
-        return new Promise(async resolve=>{
-            let q = queueMaker();
-
-            let parts = dom.split(".")
-            if (parts?.length < 2) return resolve()
-
-            else {
-                let tld_parts = (parts[parts.length-1].length === 2 && parts[parts.length-2].length === 2)?3:2;
-                let sub_mail_tld = parts.length>tld_parts ? [...parts].splice(1,0,"mail").join("."): undefined;
-                let no_sub_just_tld = parts.length>tld_parts ? [...parts].splice(0,1).join("."): undefined;
-                
-                let america_com = (tld_parts > 2) ? [...parts].join(".").replace(parts[parts.length-2]+"."+parts[parts.length-1],"com"): undefined;
-                let america_net = (tld_parts > 2) ? [...parts].join(".").replace(parts[parts.length-2]+"."+parts[parts.length-1],"net"): undefined;
-                
-                function perdom(domain) {
-                    q.imap(`imap.${domain}`);
-                    q.imap(`mail.${domain}`);
-                    q.imap(`imap4.${domain}`);
-                    q.imap(`mx.${domain}`);
-                    q.imap(domain);
-
-                    q.pop3(`mail.${domain}`);
-                    q.pop3(`pop.${domain}`);
-                    q.pop3(`pop3.${domain}`);
-                    q.pop3(`mx.${domain}`);
-                    q.pop3(domain);
-
-                    q.webmail(domain);
-                    q.webmail("mail."+domain);
-                    q.webmail("webmail."+domain);
-                }
-
-                perdom(dom);
-
-                if (sub_mail_tld) {
-                    q.imap(sub_mail_tld)
-                    q.pop3(sub_mail_tld);
-                    q.webmail(sub_mail_tld);
-                }
-
-                async.parallel(q.queue(), function(){
-                    let servers = q.servers();
-                    if (servers.length > 0) {
-                        sortServers(servers,resolve)
-                    } else if (no_sub_just_tld || (america_com && america_net)) {
-                        q = queueMaker();
-                        if (no_sub_just_tld) perdom(no_sub_just_tld)
-                        if (america_com && america_net) {
-                            perdom(america_com)
-                            perdom(america_net)
-                        }
-                        async.parallel(q.queue(), function(){
-                            let servers = q.servers();
-                            sortServers(servers,resolve);
-                        });
-                    } else resolve();
-                })
-            }
-        });
-    }
-*/
-    export function sortServers(servers, resolve){
+    
+    function sortServers(servers, resolve){
         if (servers.length > 1) {
             servers.sort(function(a,b){
                 return a.port > b.port ? -1 : 1
@@ -261,11 +179,10 @@
         }
     }
 
-    export default {
+    return {
         imap,
         pop3,
-        webmail,
         portscan,
         sortServers
-   //     search
     }
+}

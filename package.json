@@ -1,13 +1,19 @@
 {
   "name": "mailblazer",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "type": "module",
   "description": "find (imap/pop3) servers for an email domain using: dns, mozilla autoconfig, ms autodiscover and port scans.",
-  "main": "index.js",
+  "main": "src/index.js",
   "license": "MIT",
   "scripts": {
     "clean": "rm -rf gen dist",
-    "build": "yarn clean && mkdir gen && yarn rollup",
-    "rollup": "rollup -c"
+    "build": "yarn clean && mkdir gen && yarn rollup && yarn dist",
+    "rollup": "rollup -c",
+    "dist": "mkdir dist && yarn bun-win && yarn bun-linux && yarn zip && yarn tar",
+    "bun-win": "mkdir -p gen/windows && bun build --compile --target=bun-windows-x64 ./gen/bundle.min.js --outfile gen/windows/mailblazer.exe",
+    "bun-linux": "mkdir -p gen/linux &&  bun build --compile --target=bun-linux-x64 ./gen/bundle.min.js --outfile gen/linux/mailblazer",
+    "zip": "cat gen/windows/mailblazer.exe | zip > dist/mailblazer-1.0.1-win64.zip",
+    "tar": "cd gen/linux && tar cvf ../../dist/mailblazer-1.0.1-linux64.tar.xz ."
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.3",
@@ -15,11 +21,12 @@
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-replace": "^6.0.2",
     "@rollup/plugin-terser": "^0.4.4",
-    "rollup": "^4.42.0"
+    "rollup": "^4.42.0",
+    "bun": "^1.2.15"
   },
   "dependencies": {
-    "domainiac": "https://github.com/paulwardrip/domainiac.git",
     "async": "^3.2.6",
-    "cheerio": "^1.0.0"
+    "cheerio": "^1.0.0",
+    "domainiac": "https://github.com/paulwardrip/domainiac.git"
   }
 }

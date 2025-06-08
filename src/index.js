@@ -1,9 +1,8 @@
 
 import dns from 'node:dns'
 
-import { portscan, imap, pop3, webmail, sortServers } from './portscan.js'
-
-import auto from './autoconf.js'
+import scanner from './portscan.js'
+import factory from './autoconf.js'
 import domainiac from 'domainiac'
 
 import NS from './nsroot.js'
@@ -11,6 +10,8 @@ import NS from './nsroot.js'
 const { Resolver } = dns.promises;
 
 export default function mailblazer(verbose=false){
+	const { portscan, imap, pop3, webmail, sortServers } = scanner(verbose);
+	const { config, discover } = factory(verbose);
 
 	const resolver = new Resolver();
 	resolver.setServers([
@@ -23,14 +24,13 @@ export default function mailblazer(verbose=false){
 		NS.DynDNS.v4[0],
 		NS.Yandex.v4[0],
 		NS.GermanPrivacyFeV.v4[0],
-		NS.Verisign.v4[0],
-		NS.Xiala.p4[0],
+		NS.VeriSign.v4[0],
+		NS.Xiala.v4[0],
 		NS.Cloudflare.v4[0],
 		NS.Google.v4[0]
 	]);
 
 	let VERBOSE = verbose;
-	if (!email) email = "info@"+domain; 
 
 	async function record(type, domain){
 		return new Promise(async resolve=>{
@@ -171,12 +171,12 @@ export default function mailblazer(verbose=false){
 				}
 
 
-				// Perform Mozilla autoconfig and Microsoft autodiscover
+				// Perform Mozilla autoconfig ...
 				let server = await autoconf(domain);
 				if (server) return resolve(server);
 				
-				if (!email) email = `info@${domain}`;
-				server = await autodisco(domain, email);
+				// ... and failing that, Microsoft autodiscover
+				server = await autodisco(domain, `info@${domain}`);
 				if (server) return resolve(server);
 
 
