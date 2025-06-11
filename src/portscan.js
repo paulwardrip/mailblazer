@@ -99,7 +99,6 @@ export default function(verbose=false) {
             if (typeof dom === "object" && dom instanceof Array) {
                 for (let d of dom) {
                     let p = await imap(d, source);
-                    if (!p) p = await webmail(d, source);
                     if (!p) p = await pop3(d, source);
                     if (p) return resolve(p);
                 }
@@ -107,8 +106,7 @@ export default function(verbose=false) {
             } else {
                 let q = queueMaker();
                 q.imap(dom, source);
-                q.pop3(dom, source);
-                q.webmail(dom, source);                
+                q.pop3(dom, source);           
 
                 async.parallel(q.queue(), function(){
                     let servers = q.servers();
@@ -144,15 +142,9 @@ export default function(verbose=false) {
             pusher(hostname, 110, "pop3", false, source)
         }
 
-        function webmail(hostname, source) {
-            pusher(hostname, 2096, "webmail", true, source)
-            pusher(hostname, 2095, "webmail", false, source)
-        }
-
         return {
             imap,
             pop3,
-            webmail,
             queue() { return queue },
             servers() { return servers }
         }
@@ -165,7 +157,7 @@ export default function(verbose=false) {
             })
             servers.sort(function(a,b){
                 if (a.type !== b.type) {
-                    return a.type === "imap" ? -1 : a.type === "webmail" ? 1 : -1
+                    return a.type === "imap" ? -1 : 1
                 } else {
                     return 0;
                 }

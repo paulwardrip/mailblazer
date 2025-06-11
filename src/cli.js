@@ -17,10 +17,8 @@
 	} else {
 		let dom;
 		while (dom = params.pop()) {
-			console.log("Mail servers for domain:", dom);
-
 			index(verbose).resolve(dom).then(server=>{
-				console.log(server?server:"Not Found.")
+				console.log(server?server:{ "error": "Not Found." });
 			})
 		}
 	}

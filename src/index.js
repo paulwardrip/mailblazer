@@ -10,7 +10,7 @@ import NS from './nsroot.js'
 const { Resolver } = dns.promises;
 
 export default function mailblazer(verbose=false){
-	const { portscan, imap, pop3, webmail, sortServers } = scanner(verbose);
+	const { portscan, imap, pop3, sortServers } = scanner(verbose);
 	const { config, discover } = factory(verbose);
 
 	const resolver = new Resolver();
@@ -107,7 +107,7 @@ export default function mailblazer(verbose=false){
 				
 			if (automs.length > 0) {
 				for (let conf of automs) {
-					let servers = await auto.discover(conf, email);
+					let servers = await discover(conf, email);
 					if (servers) {
 						return sortServers(servers,resolve);
 					}
@@ -134,7 +134,7 @@ export default function mailblazer(verbose=false){
 				
 			if (autoconf.length > 0) {
 				for (let conf of autoconf) {
-					let servers = await auto.config(conf);
+					let servers = await config(conf);
 					if (servers) {
 						return sortServers(servers,resolve);
 					}
@@ -144,93 +144,113 @@ export default function mailblazer(verbose=false){
 		})
 	}
 
-	return {
-		resolve(domain) {
-			return new Promise(async resolve=>{
-				if (!domain) return resolve();
-				if (domain.trim() === "") return resolve();
+	function dnsdetector(domain) {
+		return new Promise(async resolve=>{
+			if (!domain) return resolve();
+			if (domain.trim() === "") return resolve();
 
-				if (VERBOSE) console.log("\n\nDNSdetector", domain);
+			if (VERBOSE) console.log("\n\nDNSdetector", domain);
 
-				// Check for dns service entries for email.
-				//
-				// [SRV] IMAP
-				//
-				let srvr = await srv("_imap._tcp."+domain);
-				if (srvr.length > 0) {
-					srvr.sort(function(a,b){
-						return (a.priority < b.priority) ? -1 : 1
-					})
-					srvr = srvr[0];
+			// Check for dns service entries for email.
+			//
+			// [SRV] IMAP
+			//
+			let srvr = await srv("_imap._tcp."+domain);
+			if (srvr.length > 0) {
+				srvr.sort(function(a,b){
+					return (a.priority < b.priority) ? -1 : 1
+				})
+				srvr = srvr[0];
 
-					return resolve({ hostname: srvr.name,
-						port: srvr.port,
-						type: "imap",
-						ssl: (srvr.port > 900),
-						source: "SRV" });
-				}
-
-
-				// Perform Mozilla autoconfig ...
-				let server = await autoconf(domain);
-				if (server) return resolve(server);
-				
-				// ... and failing that, Microsoft autodiscover
-				server = await autodisco(domain, `info@${domain}`);
-				if (server) return resolve(server);
+				return resolve({ hostname: srvr.name,
+					port: srvr.port,
+					type: "imap",
+					ssl: (srvr.port > 900),
+					source: "SRV" });
+			}
 
 
-				// Check for [A] or [CNAME] records for imap(4).domain.com
-				// Followed by port scanning these subdomains.
-				//
-				let scan, imapr = await a("imap."+domain);
-				if (!imapr) imapr = await cname("imap."+domain);
-				if (!imapr) imapr = await a("imap4."+domain);
-				if (!imapr) imapr = await cname("imap4."+domain);
-				if (imapr) {
-					server = await imap(imapr, "dns");
-				} else {
-					server = await imap([ "imap."+domain, "imap4."+domain ], "portscan");
-				}
-				if (server) return resolve(server);
-				
+			// Perform Mozilla autoconfig ...
+			let server = await autoconf(domain);
+			if (server) return resolve(server);
+			
+			// ... and failing that, Microsoft autodiscover
+			server = await autodisco(domain, `info@${domain}`);
+			if (server) return resolve(server);
 
-				// [A] or [CNAME] mail.domain.com
-				// 
-				let mailr = await a("mail."+domain);
-				if (!mailr) mailr = await cname("mail."+domain);
-				if (mailr) {
-					server = await portscan(mailr, "dns");
-				} else {
-					server = await portscan([ domain, "mail."+domain ], "portscan");
-				}
-				if (server) return resolve(server);
-						
 
-				// [A] or [CNAME] pop(3).domain.com
-				// 
-				let pop3r = await a("pop3."+domain);
-				if (!pop3r) pop3r = await cname("pop3."+domain);
-				if (!pop3r) pop3r = await a("pop."+domain);
-				if (!pop3r) pop3r = await cname("pop."+domain);
-				if (pop3r) {
-					server = await pop3(pop3r, "dns");
-				} else {
-					server = await pop3([ "pop3."+domain, "pop."+domain ], "portscan");
-				}
+			// Check for [A] or [CNAME] records for imap(4).domain.com
+			// Followed by port scanning these subdomains.
+			//
+			let scan, imapr = await a("imap."+domain);
+			if (!imapr) imapr = await cname("imap."+domain);
+			if (!imapr) imapr = await a("imap4."+domain);
+			if (!imapr) imapr = await cname("imap4."+domain);
+			if (imapr) {
+				server = await imap(imapr, "dns");
+			} else {
+				server = await imap([ "imap."+domain, "imap4."+domain ], "portscan");
+			}
+			if (server) return resolve(server);
+			
 
-				if (!server) {
-					let root = domainiac.extract(domain);
-					if (root.subdomains.length > 0) {
-						server = await dnsdetector(root.domain);
-						if (!server && root.subdomains.length === 1) {
-							server = await dnsdetector(`${root.subdomains[0]}.mail.${root.domain}`)
-						}
+			// [A] or [CNAME] mail.domain.com
+			// 
+			let mailr = await a("mail."+domain);
+			if (!mailr) mailr = await cname("mail."+domain);
+			if (mailr) {
+				server = await portscan(mailr, "dns");
+			} else {
+				server = await portscan([ domain, "mail."+domain ], "portscan");
+			}
+			if (server) return resolve(server);
+					
+
+			// [A] or [CNAME] pop(3).domain.com
+			// 
+			let pop3r = await a("pop3."+domain);
+			if (!pop3r) pop3r = await cname("pop3."+domain);
+			if (!pop3r) pop3r = await a("pop."+domain);
+			if (!pop3r) pop3r = await cname("pop."+domain);
+			if (pop3r) {
+				server = await pop3(pop3r, "dns");
+			} else {
+				server = await pop3([ "pop3."+domain, "pop."+domain ], "portscan");
+			}
+
+			if (!server) {
+				let root = domainiac.extract(domain);
+				if (root.subdomains.length > 0) {
+					server = await dnsdetector(root.domain);
+					if (!server && root.subdomains.length === 1) {
+						server = await dnsdetector(`${root.subdomains[0]}.mail.${root.domain}`)
 					}
 				}
+				if (!server && root.sld) {
+					function fixso(alternate){
+						server.source = "alternate";
+						server.comment = domain + " produced no results, but this server was found under \""+
+							alternate + "\" it's possible they're related.";
+					}
 
-				resolve (server);
-			})
-		}
+					if (/org?/.test(root.sld)) {
+						server = await dnsdetector(root.name+".org");
+						if (server) fixso(root.name+".org");
+					} else if (/net?/.test(root.sld)) {
+						server = await dnsdetector(root.name+".net");
+						if (server) fixso(root.name+".net");
+					} else {
+						server = await dnsdetector(root.name+".com");
+						if (server) fixso(root.name+".com");
+					}
+				} 
+			}
+
+			resolve (server);
+		})
+	}
+
+	return {
+		resolve: dnsdetector
 	}
 }

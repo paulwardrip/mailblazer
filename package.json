@@ -6,14 +6,16 @@
   "main": "src/index.js",
   "license": "MIT",
   "scripts": {
-    "clean": "rm -rf gen dist",
-    "build": "yarn clean && mkdir gen && yarn rollup && yarn dist",
+    "clean": "node setup.js",
+    "build": "yarn clean && yarn rollup",
     "rollup": "rollup -c",
-    "dist": "mkdir dist && yarn bun-win && yarn bun-linux && yarn zip && yarn tar",
-    "bun-win": "mkdir -p gen/windows && bun build --compile --target=bun-windows-x64 ./gen/bundle.min.js --outfile gen/windows/mailblazer.exe",
-    "bun-linux": "mkdir -p gen/linux &&  bun build --compile --target=bun-linux-x64 ./gen/bundle.min.js --outfile gen/linux/mailblazer",
-    "zip": "cat gen/windows/mailblazer.exe | zip > dist/mailblazer-1.0.1-win64.zip",
-    "tar": "cd gen/linux && tar cvf ../../dist/mailblazer-1.0.1-linux64.tar.xz ."
+    "dist": "yarn build && yarn bun-win && yarn bun-linux && yarn zip && yarn tar",
+    "bun-win": "bun build --compile --target=bun-windows-x64 ./gen/bundle.min.js --outfile gen/windows/mailblazer.exe",
+    "bun-linux": "bun build --compile --target=bun-linux-x64 ./gen/bundle.min.js --outfile gen/linux/mailblazer",
+    "zip": "cd gen/windows && zip ../../dist/mailblazer-1.0.1-win64.zip .",
+    "tar": "cd gen/linux && tar cvf ../../dist/mailblazer-1.0.1-linux64.tar.xz .",
+    "only-win": "yarn build && yarn bun-win",
+    "only-linux": "yarn build && yarn bun-linux"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.3",
